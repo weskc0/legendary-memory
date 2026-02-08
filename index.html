@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Poppy Ch.3 – 3D Corridor Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      color: #eee;
+    }
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      text-shadow: 0 0 4px #000;
+      font-size: 14px;
+      z-index: 2;
+    }
+    #story {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 80%;
+      background: rgba(0,0,0,0.7);
+      padding: 6px 10px;
+      border-radius: 5px;
+      text-align: center;
+      pointer-events: none;
+      font-size: 13px;
+      white-space: pre-line;
+      z-index: 2;
+    }
+    #startScreen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, #161822 0, #02040a 50%, #000 100%);
+      z-index: 3;
+      text-align: center;
+    }
+    #startScreen h1 {
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+    #startScreen p {
+      max-width: 380px;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    #startBtn {
+      margin-top: 16px;
+      padding: 8px 18px;
+      border-radius: 4px;
+      border: none;
+      background: #d22;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #startBtn:hover {
+      background: #f44;
+    }
+  </style>
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>Poppy Playtime Ch.3 – 3D Corridor (Fan Prototype)</h1>
+  <p>GitHub Pages 3D test: walk the corridor, feel CatNap closing in, and notice The Prototype watching above.</p>
+  <p>Controls: WASD to move forward/back/strafe, mouse to look (after clicking), Shift to sprint.</p>
+  <button id="startBtn">Click to Start</button>
+</div>
+
+<div id="overlay">
+  <span id="statusText">Click Start.</span>
+  <span id="sceneText"></span>
+</div>
+
+<div id="story"></div>
+
+<!-- Music placeholders: swap src paths later -->
+<audio id="musicTitle" loop src="audio/title_placeholder.mp3"></audio>
+<audio id="musicBgm1" loop src="audio/bgm1_placeholder.mp3"></audio>
+<audio id="musicBgm2" loop src="audio/bgm2_placeholder.mp3"></audio>
+<audio id="musicCatnap" loop src="audio/catnap_chase_placeholder.mp3"></audio>
+<audio id="musicPrototype" loop src="audio/prototype_placeholder.mp3"></audio>
+
+<!-- Three.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r155/three.min.js"></script>
+
+<script>
+/*
+  3D corridor prototype using Three.js – designed to run as static files on GitHub Pages. [web:43][web:46][web:48]
+
+  Scenes (simplified):
+    - Warmup: walk forward in corridor (bgm1).
+    - Chase: CatNap capsule behind you moves toward you (catnap music).
+    - Prototype: stop, show glowing eye above (prototype music).
+
+  This is NOT the full game, just a 3D skeleton you can expand.
+*/
+
+const startScreen = document.getElementById('startScreen');
+const startBtn = document.getElementById('startBtn');
+const statusText = document.getElementById('statusText');
+const sceneText = document.getElementById('sceneText');
+const story = document.getElementById('story');
+
+const music = {
+  title: document.getElementById('musicTitle'),
+  bgm1: document.getElementById('musicBgm1'),
+  bgm2: document.getElementById('musicBgm2'),
+  catnap: document.getElementById('musicCatnap'),
+  prototype: document.getElementById('musicPrototype'),
+};
+let currentTrack = null;
+
+function stopAllMusic() {
+  Object.values(music).forEach(a => {
+    a.pause();
+    a.currentTime = 0;
+  });
+}
+function playMusic(name) {
+  const track = music[name];
+  if (!track) return;
+  if (currentTrack === track) return;
+  stopAllMusic();
+  currentTrack = track;
+  track.volume = 0.9;
+  track.play().catch(() => {});
+}
+
+/* ---------- Three.js basic setup ---------- */
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020208);
+
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, 1.6, 8); // eye height ~1.6m
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+/* Lights */
+const ambient = new THREE.AmbientLight(0x222233);
+scene.add(ambient);
+
+const corridorLight = new THREE.PointLight(0x6666ff, 1.2, 30);
+corridorLight.position.set(0, 4, 0);
+corridorLight.castShadow = true;
+scene.add(corridorLight);
+
+const redBackLight = new THREE.PointLight(0xaa0000, 1, 40);
+redBackLight.position.set(0, 2, -25);
+scene.add(redBackLight);
+
+/* Corridor geometry – long rectangular tunnel */
+const corridorLength = 50;
+const corridorGeom = new THREE.BoxGeometry(6, 4, corridorLength);
+const corridorMat = new THREE.MeshStandardMaterial({
+  color: 0x11111c,
+  roughness: 0.9,
+  metalness: 0.05,
+});
+const corridor = new THREE.Mesh(corridorGeom, corridorMat);
+corridor.receiveShadow = true;
+corridor.position.set(0, 2, -corridorLength / 2);
+scene.add(corridor);
+
+/* Floor detail plane */
+const floorGeom = new THREE.PlaneGeometry(6, corridorLength);
+const floorMat = new THREE.MeshStandardMaterial({
+  color: 0x14141e,
+  roughness: 0.8,
+});
+const floor = new THREE.Mesh(floorGeom, floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.position.set(0, 0, -corridorLength / 2);
+floor.receiveShadow = true;
+scene.add(floor);
+
+/* Player capsule (for reference only – camera is the "head") */
+const playerMat = new THREE.MeshStandardMaterial({ color: 0x66ccff });
+const playerGeom = new THREE.CapsuleGeometry(0.4, 1.0, 4, 8);
+const playerMesh = new THREE.Mesh(playerGeom, playerMat);
+playerMesh.castShadow = true;
+playerMesh.position.set(0, 1, 8);
+scene.add(playerMesh);
+
+/* CatNap representation – purple capsule */
+const catnapMat = new THREE.MeshStandardMaterial({ color: 0xb060ff });
+const catnapGeom = new THREE.CapsuleGeometry(0.6, 1.4, 6, 12);
+const catnapMesh = new THREE.Mesh(catnapGeom, catnapMat);
+catnapMesh.castShadow = true;
+catnapMesh.position.set(0, 1, -15);
+scene.add(catnapMesh);
+
+/* Prototype "eye" – glowing sphere above corridor end */
+const eyeGeom = new THREE.SphereGeometry(0.3, 16, 16);
+const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+const prototypeEye = new THREE.Mesh(eyeGeom, eyeMat);
+prototypeEye.position.set(0, 3.2, -corridorLength + 5);
+prototypeEye.visible = false;
+scene.add(prototypeEye);
+
+/* ---------- Input (WASD + mouse look) ---------- */
+
+const keys = {};
+window.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+});
+window.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+let pointerLocked = false;
+
+renderer.domElement.addEventListener('click', () => {
+  if (!pointerLocked) {
+    renderer.domElement.requestPointerLock();
+  }
+});
+
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === renderer.domElement;
+});
+
+let yaw = 0;
+let pitch = 0;
+
+document.addEventListener('mousemove', (event) => {
+  if (!pointerLocked) return;
+  const sensitivity = 0.0025;
+  yaw -= event.movementX * sensitivity;
+  pitch -= event.movementY * sensitivity;
+  const maxPitch = Math.PI / 3;
+  pitch = Math.max(-maxPitch, Math.min(maxPitch, pitch));
+});
+
+/* ---------- Game state ---------- */
+
+const SCENE_WARMUP = 'warmup';
+const SCENE_CHASE = 'chase';
+const SCENE_PROTOTYPE = 'prototype';
+
+let gameScene = SCENE_WARMUP;
+let chaseStarted = false;
+let prototypeTimer = 0;
+
+const player = {
+  position: new THREE.Vector3(0, 1.2, 8),
+  speedWalk: 3.2,
+  speedRun: 5.5,
+};
+
+const catnap = {
+  speed: 2.8,
+  active: false,
+};
+
+/* ---------- Story helpers ---------- */
+
+function showStory(text, durationMs = 4000) {
+  story.textContent = text;
+  story.style.display = 'block';
+  if (durationMs > 0) {
+    setTimeout(() => {
+      if (story.textContent === text) {
+        story.style.display = 'none';
+      }
+    }, durationMs);
+  }
+}
+
+function setSceneText(text) {
+  sceneText.textContent = text;
+}
+
+/* ---------- Scene transitions ---------- */
+
+function startWarmup() {
+  gameScene = SCENE_WARMUP;
+  setSceneText('Playcare – Access Corridor (Warmup)');
+  statusText.textContent = 'WASD + mouse to move. Walk toward the red glow.';
+  player.position.set(0, 1.2, 8);
+  playerMesh.position.copy(player.position);
+  catnapMesh.position.set(0, 1, -15);
+  catnap.active = false;
+  prototypeEye.visible = false;
+  chaseStarted = false;
+  prototypeTimer = 0;
+  camera.position.copy(player.position);
+  playMusic('bgm1');
+  showStory(
+    'You come to in one of Playcare's corridors.\nSomewhere ahead, CatNap patrols the orphanage.',
+    5000
+  ); // CatNap patrols Playcare [web:13]
+}
+
+function startChase() {
+  gameScene = SCENE_CHASE;
+  setSceneText('Playcare – CatNap Corridor Chase');
+  statusText.textContent = 'RUN. Keep moving toward the end of the hall.';
+  catnap.active = true;
+  chaseStarted = true;
+  playMusic('catnap');
+  showStory(
+    'CatNap spots you and charges down the corridor.\nIf he catches you, Playcare keeps you forever.',
+    5000
+  ); // CatNap kills those who defy him [web:13]
+}
+
+function startPrototypeScene() {
+  gameScene = SCENE_PROTOTYPE;
+  setSceneText('Deeper – Watched by The Prototype');
+  catnap.active = false;
+  statusText.textContent = '';
+  prototypeEye.visible = true;
+  prototypeTimer = 0;
+  playMusic('prototype');
+  showStory(
+    'You slip past CatNap toward the deeper levels.\nHigh above, in the dark metal ribs of the factory, a single red eye studies you in silence.',
+    6000
+  ); // Prototype watches from the shadows, deeper in the facility [web:13][web:32]
+}
+
+/* ---------- CatNap / Prototype updates ---------- */
+
+function updateCatnap(dt) {
+  if (!catnap.active) return;
+  const target = player.position.clone();
+  const pos = catnapMesh.position;
+  const dir = target.sub(pos);
+  const dist = dir.length();
+  if (dist > 0.001) dir.normalize();
+  const move = catnap.speed * dt;
+  if (dist > move) {
+    pos.addScaledVector(dir, move);
+  }
+
+  // If CatNap gets within 1.4 units, "catch" the player
+  if (dist < 1.4) {
+    stopAllMusic();
+    statusText.textContent = 'CatNap catches you. Press R to restart.';
+    showStory('Red smoke fills your lungs. Playcare is not done with you.\nPress R to try again.', 0);
+    catnap.active = false;
+  }
+}
+
+function updatePrototype(dt) {
+  prototypeTimer += dt;
+  // Simple subtle flicker
+  const t = performance.now() * 0.004;
+  const scale = 1 + Math.sin(t) * 0.15;
+  prototypeEye.scale.set(scale, scale, scale);
+}
+
+/* ---------- Main update loop ---------- */
+
+let lastTime = performance.now();
+
+function tick(now) {
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+
+  // Player movement
+  const forward = new THREE.Vector3(
+    Math.sin(yaw),
+    0,
+    Math.cos(yaw)
+  ).negate(); // camera looks -Z by default
+  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0,1,0)).negate();
+
+  let speed = player.speedWalk;
+  if (keys['shift']) speed = player.speedRun;
+
+  let move = new THREE.Vector3(0,0,0);
+  if (keys['w']) move.add(forward);
+  if (keys['s']) move.sub(forward);
+  if (keys['a']) move.sub(right);
+  if (keys['d']) move.add(right);
+  if (move.lengthSq() > 0) {
+    move.normalize().multiplyScalar(speed * dt);
+  }
+
+  // Constrain movement inside corridor bounds
+  player.position.add(move);
+  const halfWidth = 2.2;
+  const minZ = -corridorLength + 4;
+  const maxZ = 9;
+  player.position.x = Math.max(-halfWidth, Math.min(halfWidth, player.position.x));
+  player.position.z = Math.max(minZ, Math.min(maxZ, player.position.z));
+
+  camera.position.copy(player.position);
+  camera.rotation.set(0, 0, 0);
+  camera.rotateY(yaw);
+  camera.rotateX(pitch);
+
+  playerMesh.position.copy(player.position);
+
+  // Scene transitions
+  if (gameScene === SCENE_WARMUP) {
+    if (player.position.z < -5 && !chaseStarted) {
+      // Approaching the red glow area
+      playMusic('bgm2');
+      showStory('The corridor narrows. CatNap will not let you walk out of Playcare.', 4000);
+      chaseStarted = true; // pre-flag
+    }
+    if (player.position.z < -10) {
+      startChase();
+    }
+  } else if (gameScene === SCENE_CHASE) {
+    updateCatnap(dt);
+    // If player reaches the far end, trigger Prototype scene
+    if (player.position.z <= minZ + 1 && catnap.active) {
+      startPrototypeScene();
+    }
+  } else if (gameScene === SCENE_PROTOTYPE) {
+    updatePrototype(dt);
+  }
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+/* ---------- Start/restart ---------- */
+
+startBtn.addEventListener('click', () => {
+  startScreen.style.display = 'none';
+  statusText.textContent = 'Click in the window, then use WASD + mouse to move.';
+  sceneText.textContent = 'Loading corridor…';
+  playMusic('title');
+  // modest delay then warmup to allow audio
+  setTimeout(() => {
+    startWarmup();
+  }, 800);
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'r') {
+    startWarmup();
+  }
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ---------- Kick off loop ---------- */
+
+requestAnimationFrame(tick);
+</script>
+
+</body>
+</html>
