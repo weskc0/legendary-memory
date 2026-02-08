@@ -1,1 +1,85 @@
-<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Legendary Memory</title>\n</head>\n<body>\n    <h1>Welcome to Legendary Memory</h1>\n    <audio id="bgm1" src="Bgm-1.mp3" preload="auto" loop></audio>\n    <audio id="bgm2" src="Bgm2.mp3" preload="auto" loop></audio>\n    <audio id="prototypeEncounter" src="Prototype encounter music.mp3" preload="auto"></audio>\n    <audio id="titleMusic" src="Title music.mp3" preload="auto"></audio>\n    <audio id="chaseMusic" src="chase music.mp3" preload="auto"></audio>\n    <script>\n        const bgm1 = document.getElementById('bgm1');\n        const bgm2 = document.getElementById('bgm2');\n        const prototypeEncounter = document.getElementById('prototypeEncounter');\n        const titleMusic = document.getElementById('titleMusic');\n        const chaseMusic = document.getElementById('chaseMusic');\n\n        // Function to play background music\n        function playBackgroundMusic() {\n            bgm1.play();\n        }\n\n        // Add event listeners or game code to trigger music at appropriate times\n    </script>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poppy Playtime Chapter 3 Fan Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #hud { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        <p>Health: <span id="health">100</span></p>
+        <p>Sanity: <span id="sanity">100</span></p>
+        <p>Stamina: <span id="stamina">100</span></p>
+    </div>
+    <script>
+        // Game Variables
+        let health = 100;
+        let sanity = 100;
+        let stamina = 100;
+        let isChasing = false;
+        let scene, camera, renderer, player;
+        let bgMusic, chaseMusic;
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Load Background Music
+            bgMusic = new Audio('Bgm-1.mp3');
+            bgMusic.loop = true;
+            bgMusic.play();
+
+            // Create Player
+            player = new THREE.Mesh( new THREE.BoxGeometry(1, 2, 1), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+            scene.add(player);
+            camera.position.z = 5;
+
+            // Event Listeners
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('mousemove', onMouseMove);
+
+            animate();
+        }
+
+        function onKeyDown(event) {
+            switch (event.key) {
+                case 'w':
+                    player.position.z -= 0.1;
+                    break;
+                case 's':
+                    player.position.z += 0.1;
+                    break;
+                case 'a':
+                    player.position.x -= 0.1;
+                    break;
+                case 'd':
+                    player.position.x += 0.1;
+                    break;
+            }
+        }
+
+        function onMouseMove(event) {
+            // Simple mouse look implementation
+            camera.rotation.y -= event.movementX * 0.001;
+            camera.rotation.x -= event.movementY * 0.001;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
