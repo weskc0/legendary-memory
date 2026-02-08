@@ -4,68 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Poppy Playtime Chapter 3 Fan Game</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="game.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
 </head>
 <body>
-    <div id="game-container">
-        <h1>Poppy Playtime Chapter 3</h1>
-        <p>Enter a world of horror and mystery...</p>
-        <div id="corridor">
-            <!-- 3D Environment Rendered Here -->
-        </div>
-        <div id="ui">
-            <div id="health-bar"></div>
-            <div id="sanity-bar"></div>
-            <div id="collectibles"></div>
-        </div>
-        <audio id="background-music" loop>
-            <source src="audio/background.mp3" type="audio/mpeg">
-        </audio>
-    </div>
     <script>
-        // Initialize game variables
-        let health = 100;
-        let sanity = 100;
-        let collectiblesFound = 0;
-        
-        // Game mechanics
-        function updateUI() {
-            document.getElementById('health-bar').style.width = health + '%';
-            document.getElementById('sanity-bar').style.width = sanity + '%';
+        // Initialize Three.js
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+        scene.add(pointLight);
+
+        // Game setup
+        function setupGame() {
+            // Add game objects here
+
+            // Camera position
+            camera.position.z = 5;
         }
-        
-        function collectibleFound() {
-            collectiblesFound += 1;
-            updateUI();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
         }
-        
-        function saveGame() {
-            // Save logic here
-        }
-        
-        // Call this function to start the game
-        function startGame() {
-            // Initialize environment, lighting, and AI
-            initEnvironment();
-            initAI();
-            playMusic();
-        }
-        
-        function initEnvironment() {
-            // Setup 3D corridor with dynamic lighting and particle effects
-        }
-        
-        function initAI() {
-            // Initialize CatNap AI and The Prototype
-        }
-        
-        function playMusic() {
-            document.getElementById('background-music').play();
-        }
-        
-        // Starting the game
-        startGame();
+
+        setupGame();
+        animate();
     </script>
 </body>
 </html>
